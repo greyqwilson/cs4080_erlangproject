@@ -2,56 +2,107 @@
 -export([init/2]).
 
 %pass clientstore into here to link
-init(Cstorage, Warehouse) ->
-    run(Cstorage, Warehouse).
+init(Clientstorage, Warehouse) ->
+    run(Clientstorage, Warehouse).
 
-run(Cstorage, Warehouse) ->
+run(Clientstorage, Warehouse) ->
     receive
         
-        % ~~~ ClientAP <--> ClientStore interactions
-        {From, {new_account, {User, Pass}}} ->
+        % ~~~ (*)??? --> self <--> ClientStore
+        {From, new_account, {User, Pass}} ->
             %Send to clientstore to request new account
-            Cstorage ! {self(), {new, {User, Pass}}},
-            io:format("Sent message to Cstorage. Awaiting reply~n"),
+            Clientstorage ! {self(), new, {User, Pass}},
+            io:format("Sent message to Cstorage. Awaiting reply...~n"),
             receive 
                 {_, new_acct_made} ->
-                    io:format("New account made!~n"),
+                    io:format("New account made for ~s!~n", [User]),
                     %Tell warehouse to create a map for user's storage
-                    Warehouse ! {self(), init_acct},
+                    Warehouse ! {self(), init_acct, User},
                     From ! {self(), acct_made};
-
+                    
                 _ ->
                     io:format("Something went wrong making account!~n")
             end;
 
-        % ~~~ ClientAP <--> ClientUser interactions
 
-        {From, {add_data, {User, Pass}, {Data}}} ->
-            Cstorage ! {self(), {verify, {User, Pass}}},
+        % ~~~ (*)??? --> self: <--> ClientUser, --> Warehouse
+        {From, put_data, {User, Pass}, Data_name, Data} ->
+            Clientstorage ! {self(), verify, {User, Pass}},
             receive
                 {_, goodpass} ->
                     %talk to warehouse
-                    Warehouse ! {self(), {put, {User, Data}}},
-                    io:format("unimplemented~n");
+                    Warehouse ! {self(), put_data, User, Data_name, Data},
+                    io:format("Sent to warehouse!~n");
+                
                 {_, badpass} ->
                     %spit out error
                     io:format("Password mismatch~n");
+                
                 {_, badkey} ->
                     %spit out error
                     io:format("Unknown account ~s~n", [User])
             end,
-
-            io:format("unimplemented~n");
+            From ! {self(), done},
+            io:format("End of put_data in clientap~n");
         
-        {From, {remove_data, {User, Pass}, {Key}}} ->
-            io:format("unimplemented~n");
+        % ~~~ (*)??? --> self: <--> ClientStore, --> Warehouse
+        {From, remove_data, {User, Pass}, Data_name} ->
+            Clientstorage ! {self(), verify, {User, Pass}},
+            receive
+                {_, goodpass} ->
+                    %talk to warehouse
+                    Warehouse ! {self(), remove_data, User, Data_name},
+                    io:format("Sent to warehouse!~n");
+                
+                {_, badpass} ->
+                    %spit out error
+                    io:format("Password mismatch~n");
+                
+                {_, badkey} ->
+                    %spit out error
+                    io:format("Unknown account ~s~n", [User])
+            end,
+            From ! {self(), done},
+            io:format("End of remove_data in clientap~n");
         
-        {From, {update_data, {User, Pass}, {Key}, {Data}}} ->
-            io:format("unimplemented~n");
+        {From, update_data, {User, Pass}, Data_name, Data} ->
+            Clientstorage ! {self(), verify, {User, Pass}},
+            receive
+                {_, goodpass} ->
+                    %talk to warehouse
+                    Warehouse ! {self(), update_data, User, Data_name, Data},
+                    io:format("Sent to warehouse!~n");
+                
+                {_, badpass} ->
+                    %spit out error
+                    io:format("Password mismatch~n");
+                
+                {_, badkey} ->
+                    %spit out error
+                    io:format("Unknown account ~s~n", [User])
+            end,
+            From ! {self(), done},
+            io:format("End of update_data in clientap~n");
 
-        {From, {print_collection, {User, Pass}}} ->
-            io:format("unimplemented~n")
+        {From, view_collection, {User, Pass}} ->
+            Clientstorage ! {self(), verify, {User, Pass}},
+            receive
+                {_, goodpass} ->
+                    %talk to warehouse
+                    Warehouse ! {self(), view_collection, User},
+                    io:format("Sent to warehouse!~n");
+                
+                {_, badpass} ->
+                    %spit out error
+                    io:format("Password mismatch~n");
+                
+                {_, badkey} ->
+                    %spit out error
+                    io:format("Unknown account ~s~n", [User])
+            end,
+            From ! {self(), done},
+            io:format("End of print_collection in clientap~n")
     end,
-    run(Cstorage, Warehouse).
+    run(Clientstorage, Warehouse).
 
 

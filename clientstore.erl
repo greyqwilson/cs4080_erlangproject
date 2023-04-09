@@ -10,31 +10,36 @@ init()->
 
 init(Userstore) ->
     %add template entry to store
-    maps:put(username, password, Userstore),
-    run(Userstore).
+    Userstore_ = maps:put(username, password, Userstore),
+    run(Userstore_).
 
 run(Userstore) ->
     receive
 
+        % ~~~ (*)ClientAP <--> self
         %Make a new account 
         %(--TODO: Check if already exists --)
-        {From, {new, {User, Pass}}} ->
-            new_acct({User, Pass}, Userstore),
-            From ! {self(), new_acct_made};
+        {From, new, {User, Pass}} ->
+            Userstore_ = maps:put(User, Pass, Userstore),
+            From ! {self(), new_acct_made},
+            run(Userstore_);
 
+        % ~~~ (*)ClientAP <--> self
         %Verify account exists and password correct
-        {From, {verify, {User, Pass}}}  ->
+        {From, verify, {User, Pass}}  ->
             case maps:find(User, Userstore) of
                 {ok, Value} -> 
                     if Value =:= Pass -> From ! {self(), goodpass};
                         true -> From ! {self(), badpass}
                     end;
                 error -> From ! {self(), badkey}
-            end
+            end,
+            run(Userstore);
 
-    end,
-    run(Userstore).
-            
+        % ~~~ (*) Supervisor --> self
+        {From, print_users} ->
+            %use function
+            io:format("End of print_users~n")
 
-new_acct({Username, Password}, Userstore) ->
-    maps:put(Username, Password, Userstore).
+    end.
+        
