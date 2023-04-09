@@ -101,8 +101,54 @@ run(Clientstorage, Warehouse) ->
                     io:format("Unknown account ~s~n", [User])
             end,
             From ! {self(), done},
-            io:format("End of print_collection in clientap~n")
+            io:format("End of print_collection in clientap~n");
+
+        % (*)ClientUser --> self
+        {From, peek_data, {User, Pass}, Data_name} ->
+            Clientstorage ! {self(), verify, {User, Pass}},
+            receive
+                {_, goodpass} ->
+                    Warehouse ! {self(), peek_data, User, Data_name};
+                
+                {_, badpass} ->
+                    %spit out error
+                    io:format("Password mismatch~n");
+                
+                {_, badkey} ->
+                    %spit out error
+                    io:format("Unknown account ~s~n", [User])
+            end;
+
+        % (*)ClientUser --> self
+        {From, login, {User, Pass}} ->
+            Clientstorage ! {self(), verify, {User, Pass}},
+            receive
+                {_, goodpass} ->
+                    From ! {self(), welcome};
+                
+                {_, badpass} ->
+                    %spit out error
+                    io:format("Password mismatch~n");
+                
+                {_, badkey} ->
+                    %spit out error
+                    io:format("Unknown account ~s~n", [User])
+            end
     end,
     run(Clientstorage, Warehouse).
 
 
+handle_verify(User, Pass, Clientstorage, Goodmsg, Sendto) ->
+    Clientstorage ! {self(), verify, {User, Pass}},
+            receive
+                {_, goodpass} ->
+                    Sendto ! Goodmsg;
+                
+                {_, badpass} ->
+                    %spit out error
+                    io:format("Password mismatch~n");
+                
+                {_, badkey} ->
+                    %spit out error
+                    io:format("Unknown account ~s~n", [User])
+            end.

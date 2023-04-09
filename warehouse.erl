@@ -3,7 +3,9 @@
 
 %pass empty list and begin main loop
 init() ->
-    run([], 0).
+    %Make at least one storage container
+    First_SC = spawn(storage_container, init, []),
+    run([First_SC], 1).
 
 %whstore is a list of storage_container's
 run(Whstore, N_storages) ->
@@ -14,8 +16,12 @@ run(Whstore, N_storages) ->
         {From, construct_st, Name}->
             %append name to store
             % should these be identifiable by names?
+            %sync data with rest of containers
+            H = hd(Whstore),
             New_SC = spawn(storage_container, init, []),
+            H ! {New_SC, mget_storage}, 
             io:format("Made storage ~s with PID: ~w.~n", [Name, New_SC]),
+            
             run([New_SC|Whstore] , N_storages + 1);
 
         % ~~~ (*)ClientAP --> self ->-> Storage_Container(s)
@@ -52,6 +58,10 @@ run(Whstore, N_storages) ->
         
         {From, view_collection, User} ->
             mass_message({self(), view_collection, User}, Whstore, N_storages),
+            run(Whstore, N_storages);
+        
+        {From, peek_data, User, Data_name} ->
+            hd(Whstore) ! {self(), peek_data, User, Data_name},
             run(Whstore, N_storages);
 
         _ ->
