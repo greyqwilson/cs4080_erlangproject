@@ -27,7 +27,7 @@ run(Whstore, N_storages) ->
         {From, construct_st, Name}->
             %sync data with rest of containers
             H = hd(Whstore),
-            New_SC = spawn(storage_container, init, []),
+            New_SC = spawn_link(storage_container, init, []),
             register(Name, New_SC),
             H ! {New_SC, mget_storage}, 
             io:format("Made storage ~s with PID: ~w.~n", [Name, New_SC]),
