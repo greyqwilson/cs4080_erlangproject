@@ -3,22 +3,32 @@
 
 %pass empty list and begin main loop
 init() ->
+    
     %Make at least one storage container
-    First_SC = spawn(storage_container, init, []),
-    run([First_SC], 1).
+    First_SC = spawn_link(storage_container, init, []),
+    register(first_sc, First_SC),
+    init([First_SC], 1).
+
+init(Whstore, N_storages) ->
+    %Ensure supervisor gets link to list of storage containers
+    receive
+        {From, sv_givelist} ->
+            From ! {self(), sv_listgive, Whstore},
+            run(Whstore, N_storages)
+
+    end.
 
 %whstore is a list of storage_container's
 run(Whstore, N_storages) ->
+    process_flag(trap_exit, true),
     receive
-
         % ~~~ (*)??? --> self
         %Make a storage container
         {From, construct_st, Name}->
-            %append name to store
-            % should these be identifiable by names?
             %sync data with rest of containers
             H = hd(Whstore),
             New_SC = spawn(storage_container, init, []),
+            register(Name, New_SC),
             H ! {New_SC, mget_storage}, 
             io:format("Made storage ~s with PID: ~w.~n", [Name, New_SC]),
             
@@ -63,6 +73,17 @@ run(Whstore, N_storages) ->
         {From, peek_data, User, Data_name} ->
             hd(Whstore) ! {self(), peek_data, User, Data_name},
             run(Whstore, N_storages);
+        
+        {'EXIT', Pid, Reason} ->
+            io:format("Got EXIT from ~p with reason: ~w~n", [Pid, Reason]),
+            %Remove dead storage container from our list
+            Whstore_ = lists:delete(Pid, Whstore),
+            %Get the PID of the head of the list (assuming the list isn't out of storage_containers)
+            H = hd(Whstore),
+            %Make a new one and copy next storage container over
+            New_SC = spawn_link(storage_container, init, []),
+            H ! {New_SC, mget_storage},
+            run([New_SC|Whstore_], N_storages);
 
         _ ->
             io:format("Unrecognized message.~n"),

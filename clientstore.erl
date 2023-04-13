@@ -5,13 +5,17 @@
 %entry into program
 %make new dictionary and pass to init/1
 init()->
-    Cstorage = maps:new(),
+    %add template entry to store
+    Cstorage = maps:put(username, password, maps:new()),
     init(Cstorage).
 
 init(Userstore) ->
-    %add template entry to store
-    Userstore_ = maps:put(username, password, Userstore),
-    run(Userstore_).
+    %Ensure supervisor gets link to list of users
+    receive
+        {From, sv_givelist} ->
+            From ! {self(), sv_listgive, Userstore},
+            run(Userstore)
+    end.
 
 run(Userstore) ->
     receive
@@ -39,7 +43,11 @@ run(Userstore) ->
         % ~~~ (*) Supervisor --> self
         {From, print_users} ->
             %use function
-            io:format("End of print_users~n")
+            io:format("End of print_users~n");
+
+        
+        {'EXIT', Pid, Reason} ->
+            io:format("Got EXIT from ~p with reason: ~w~nClosing ~p~n", [Pid, Reason, self()])
 
     end.
         

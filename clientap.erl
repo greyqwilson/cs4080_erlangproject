@@ -22,7 +22,8 @@ run(Clientstorage, Warehouse) ->
                     
                 _ ->
                     io:format("Something went wrong making account!~n")
-            end;
+            end,
+            run(Clientstorage, Warehouse);
 
 
         % ~~~ (*)??? --> self: <--> ClientUser, --> Warehouse
@@ -43,7 +44,8 @@ run(Clientstorage, Warehouse) ->
                     io:format("Unknown account ~s~n", [User])
             end,
             From ! {self(), done},
-            io:format("End of put_data in clientap~n");
+            io:format("End of put_data in clientap~n"),
+            run(Clientstorage, Warehouse);
         
         % ~~~ (*)??? --> self: <--> ClientStore, --> Warehouse
         {From, remove_data, {User, Pass}, Data_name} ->
@@ -63,7 +65,8 @@ run(Clientstorage, Warehouse) ->
                     io:format("Unknown account ~s~n", [User])
             end,
             From ! {self(), done},
-            io:format("End of remove_data in clientap~n");
+            io:format("End of remove_data in clientap~n"),
+            run(Clientstorage, Warehouse);
         
         {From, update_data, {User, Pass}, Data_name, Data} ->
             Clientstorage ! {self(), verify, {User, Pass}},
@@ -82,7 +85,8 @@ run(Clientstorage, Warehouse) ->
                     io:format("Unknown account ~s~n", [User])
             end,
             From ! {self(), done},
-            io:format("End of update_data in clientap~n");
+            io:format("End of update_data in clientap~n"),
+            run(Clientstorage, Warehouse);
 
         {From, view_collection, {User, Pass}} ->
             Clientstorage ! {self(), verify, {User, Pass}},
@@ -101,7 +105,8 @@ run(Clientstorage, Warehouse) ->
                     io:format("Unknown account ~s~n", [User])
             end,
             From ! {self(), done},
-            io:format("End of print_collection in clientap~n");
+            io:format("End of print_collection in clientap~n"),
+            run(Clientstorage, Warehouse);
 
         % (*)ClientUser --> self
         {From, peek_data, {User, Pass}, Data_name} ->
@@ -117,7 +122,9 @@ run(Clientstorage, Warehouse) ->
                 {_, badkey} ->
                     %spit out error
                     io:format("Unknown account ~s~n", [User])
-            end;
+            end,
+            run(Clientstorage, Warehouse);
+        
 
         % (*)ClientUser --> self
         {From, login, {User, Pass}} ->
@@ -133,9 +140,14 @@ run(Clientstorage, Warehouse) ->
                 {_, badkey} ->
                     %spit out error
                     io:format("Unknown account ~s~n", [User])
-            end
-    end,
-    run(Clientstorage, Warehouse).
+            end,
+            run(Clientstorage, Warehouse);
+
+            
+        {'EXIT', Pid, Reason} ->
+            io:format("Got EXIT from ~p with reason: ~w~nClosing ~p~n", [Pid, Reason, self()])
+
+    end.
 
 
 handle_verify(User, Pass, Clientstorage, Goodmsg, Sendto) ->

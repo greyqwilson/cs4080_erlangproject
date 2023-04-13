@@ -84,5 +84,8 @@ run(Storage) ->
         % ~~~ (*)Warehouse --> Storage_container A --> Storage_container B
         {From, mget_storage} ->
             From ! {self(), merge_storage, Storage},
-            run(Storage)
+            run(Storage);
+
+        {'EXIT', Pid, Reason} ->
+            io:format("Got EXIT from ~p with reason: ~w~nClosing ~p~n", [Pid, Reason, self()])
     end.
