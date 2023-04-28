@@ -8,7 +8,7 @@ init(CAP_Pid) ->
             CAP_Pid ! {self(), login, {User, Pass}},
             receive
                 {FromCAP, welcome} ->
-                    io:format("Logged in as ~s~n", [User]),
+                    io:format("Successfully logged in! ~s~n", [User]),
                     run(CAP_Pid, {User, Pass});
                 _ ->
                     io:format("Wrong username or password given.~n"),
@@ -35,7 +35,7 @@ init(CAP_Pid) ->
 
 
 run(CAP_Pid, {User, Pass}) ->
-    io:format("Logged in as ~s~n", [User]),
+
     receive
         %store
         {add, Data_name, Data} ->
@@ -62,5 +62,6 @@ run(CAP_Pid, {User, Pass}) ->
             run(CAP_Pid, {User, Pass});
 
         {logout} ->
+            io:format("~s has logged out~n", [User]),
             init(CAP_Pid)
     end.

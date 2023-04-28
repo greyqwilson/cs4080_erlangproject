@@ -13,6 +13,7 @@ init() ->
 
     end,
     register(warehouseN, Warehouse),
+    io:format("Warehouse started under warehouseN.~n"),
 
     io:format("Starting clientstore~n"),
     Clientstore = spawn_link(clientstore, init, []),
@@ -24,10 +25,12 @@ init() ->
 
     end,
     register(clientstoreN, Clientstore),
+    io:format("ClientStore started under clientstoreN.~n"),
 
     io:format("Starting clientap~n"),
     ClientAP = spawn_link(clientap, init, [Clientstore, Warehouse]),
     register(clientapN, ClientAP),
+    io:format("ClientAP started under clientapN.~n"),
     Watchlist = #{Warehouse => wh, Clientstore => cs, ClientAP => cap},
 
     loop(Warehouse, Clientstore, ClientAP, Watchlist, Whstore, Cstorage).

@@ -27,7 +27,7 @@ run(Whstore, N_storages) ->
         {From, construct_st, Name}->
             %sync data with rest of containers
             H = hd(Whstore),
-            New_SC = spawn(storage_container, init, []),
+            New_SC = spawn_link(storage_container, init, []),
             register(Name, New_SC),
             H ! {New_SC, mget_storage}, 
             io:format("Made storage ~s with PID: ~w.~n", [Name, New_SC]),
@@ -101,9 +101,10 @@ print([H|T], N) ->
 
 %Mass message each storage container in warehouse
 mass_message(_, [], 0) ->
-    io:format("Messages sent~n");
+    ok;
+    %io:format("Messages sent~n");
 
 mass_message(Message, [H|Rest], N) ->
     H ! Message,
-    io:format("~w left to send!~n", [N-1]),
+    %io:format("~w left to send!~n", [N-1]),
     mass_message(Message, Rest, N-1).
